@@ -1,0 +1,21 @@
+이라크 뉴스 자동 웹사이트 설치 방법
+================================
+
+1. GitHub 무료 회원가입: https://github.com/signup
+2. 새 저장소 만들기: https://github.com/new
+   - 이름: iraq-news
+   - Public 선택
+   - README 자동 추가하지 않음
+3. ZIP 압축 해제 후, 안에 있는 파일과 폴더를 모두 선택.
+4. 빈 저장소에서 "uploading an existing file" 클릭 → 파일 업로드 → Commit changes.
+   - .github 폴더도 꼭 포함
+5. Settings → Pages → Source: GitHub Actions
+6. Actions → "이라크 뉴스 자동 업데이트 및 웹 배포" → Run workflow
+7. 웹페이지: https://[본인의 GitHub 사용자이름].github.io/iraq-news/
+
+기본 자동화는 매일 바그다드 07:10 전후 실행합니다.
+OpenAI API 키를 넣지 않아도 RSS 제목 수집과 웹 게시가 작동합니다.
+한국어 자동 번역·요약은 별도의 유료 OpenAI API 키가 있어야 합니다.
+NIC/Facebook 원문 자동 확인에는 접근 제한이 있어 누락될 수 있습니다.
+
+자세한 내용: README.md
