@@ -2,7 +2,7 @@ name: 이라크 뉴스 자동 업데이트 및 웹 배포
 
 on:
   schedule:
-    # 바그다드 오전 07:00 = UTC 04:00 (연중 UTC+3)
+    # 바그다드 07:00 (UTC+03:00) = UTC 04:00
     - cron: '0 4 * * *'
   workflow_dispatch:
   push:
@@ -14,32 +14,39 @@ permissions:
   id-token: write
 
 concurrency:
-  group: iraq-morning-brief-pages
+  group: iraq-news-pages
   cancel-in-progress: false
 
 jobs:
-  update-and-deploy:
+  update-and-build:
+    name: Update news and upload website
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout files
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           persist-credentials: true
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
       - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Collect RSS news and build site
+        run: python -m pip install -r requirements.txt
+
+      - name: Collect news and build site
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-6.1-terra' }}
         run: python update.py
-      - name: Save archive history to repository
+
+      - name: Check website files
+        run: |
+          test -s public/index.html || { echo 'ERROR: public/index.html was not created'; exit 1; }
+          ls -lah public
+
+      - name: Save news history
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -48,12 +55,41 @@ jobs:
             git commit -m 'Update Iraq news archive'
             git push origin HEAD:main
           fi
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Upload website files
+
+      - name: Upload website artifact
+        id: upload
         uses: actions/upload-pages-artifact@v4
         with:
+          name: github-pages
           path: public
-      - name: Publish website
+
+      - name: Confirm website artifact uploaded
+        env:
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact_id }}
+        run: |
+          if [ -z "$ARTIFACT_ID" ]; then
+            echo 'ERROR: GitHub Pages artifact upload did not return an artifact ID.'
+            exit 1
+          fi
+          echo "Uploaded GitHub Pages artifact ID: $ARTIFACT_ID"
+
+  deploy:
+    name: Publish website
+    needs: update-and-build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy website to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages
